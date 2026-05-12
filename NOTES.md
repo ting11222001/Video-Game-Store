@@ -345,3 +345,47 @@ Transfer-Encoding: chunked
 ```
 
 So till this point, I'm learning how to use in-memory resources to have an idea how the CRUD endpoints work in `.NET core` with the help of `REST Client` extension - bascially just running `dotnet run` in the `GameStore.Api` folder.
+
+## Setup Entity Framework Core
+
+### The Need For Object-Relational Mapping (O/RM)
+A C# REST API talks to a SQL database. The flow works like this:
+
+From C# REST API to SQL Database:
+- Translate the Web API request to a SQL query
+- Send the SQL query to the database server
+
+From SQL Database to C# REST API:
+- Read the resulting database rows
+- Translate the database rows to a Web API response
+
+Problems:
+- Need to learn a new language (SQL)
+- Need a lot of additional data-access code
+- Error prone
+- Need to manually keep C# models in sync with DB tables
+
+### What is ORM
+
+ORM works as a middle layer between your code and a database.
+
+Your program uses objects (like Song, Artist, Playlist classes). 
+
+Your database stores the same data in tables. The ORM translates between the two, so you can write code like `Song.find(1)` instead of `SELECT * FROM songs WHERE id = 1`.
+
+The arrows go both ways, meaning the ORM handles both reading from and writing to the database.
+
+So Entity Framework Core is a lightweight, open source object-relational mapper for .NET.
+
+Benefits of using EF Core:
+```
+You write C# instead of SQL. Query data using LINQ, which feels natural in C# code.
+
+Your classes become your schema. You define C# models, and EF Core can create the database tables from them.
+
+Migrations. When you change a model, EF Core generates migration files to update the database schema without manual SQL scripts.
+
+Less boilerplate. No need to manually map database rows to objects. EF Core does that automatically.
+
+Database portability. You can switch between SQL Server, PostgreSQL, SQLite, etc. with minimal code changes.
+```
