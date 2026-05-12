@@ -229,3 +229,58 @@ That applies auth to every route in the group automatically.
 
 ### Why RouteGroupBuilder as the return type
 The method now returns the group object instead of `app`. This still allows chaining, and the caller can add more config to the group if needed.
+
+## Handle invalid inputs
+
+Other than data annotation, I also need this `Nuget` package called `MinimalApis.Extensions`.
+
+Go to https://www.nuget.org/
+
+Type in the extension's name and copy:
+```
+dotnet add package MinimalApis.Extensions --version 0.11.0
+```
+
+And run inthe `GameStore.Api` route.
+
+Once installed, this will show in `GameStore.Api.csproj`:
+```
+  <ItemGroup>
+    <PackageReference Include="MinimalApis.Extensions" Version="0.11.0" />
+  </ItemGroup>
+```
+
+so then I can use `WithParameterValidation` in `GamesEndpoints` to make those data annotations in `CreateGameDto` work.
+
+Now if I `POST` a payload with "name" missing:
+```
+POST http://localhost:5135/games
+Content-Type: application/json
+
+{
+    "genre": "Kids and Family",
+    "price": 19.99,
+    "releaseDate": "2011-11-18"
+}
+```
+
+It will return a proper error message:
+```
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Tue, 12 May 2026 11:28:20 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "Name": [
+      "The Name field is required."
+    ]
+  }
+}
+```
