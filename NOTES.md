@@ -284,3 +284,64 @@ Transfer-Encoding: chunked
   }
 }
 ```
+
+I can add `.WithParameterValidation()` to a specific method like to the `POST` method:
+```
+// POST /games
+        group.MapPost("/", (CreateGameDto newGame) =>
+        {
+            GameDto game = new (
+                games.Count + 1,
+                newGame.Name,
+                newGame.Genre,
+                newGame.Price,
+                newGame.ReleaseDate
+            );
+            games.Add(game);
+
+            return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game);
+        })
+        .WithParameterValidation();
+```
+
+Or add `.WithParameterValidation();` to the `MapGroup` like this:
+```
+var group = app.MapGroup("games").WithParameterValidation();
+```
+
+Test again - this time with a very long "name":
+```
+###
+POST http://localhost:5135/games
+Content-Type: application/json
+
+{
+    "name": "MinecraftMinecraftMinecraftMinecraftMinecraftMinecraftMinecraft",
+    "genre": "Kids and Family",
+    "price": 19.99,
+    "releaseDate": "2011-11-18"
+}
+```
+
+I can see the validation error message properly:
+```
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Tue, 12 May 2026 11:33:57 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "Name": [
+      "The field Name must be a string with a maximum length of 50."
+    ]
+  }
+}
+```
+
+So till this point, I'm learning how to use in-memory resources to have an idea how the CRUD endpoints work in `.NET core` with the help of `REST Client` extension - bascially just running `dotnet run` in the `GameStore.Api` folder.
