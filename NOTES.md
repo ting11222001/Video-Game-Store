@@ -60,9 +60,9 @@ In `Program.cs`, put the red dot at this line, it should trigger the breakpoint:
 app.MapGet("/", () => "Hello World!");
 ```
 
-## APIs
+## Test APIs
 
-Games REST API
+Games REST API I'm adding: 
 ```
 GET /games
 GET /games/1
@@ -71,13 +71,100 @@ PUT /games/1
 DELETE /games/1
 ```
 
-Use `REST Client` extension.
+Used `REST Client` extension.
 
 Created `games.http` in `GameStore.Api` folder.
 
-Add this, `cd GameStore.Api` and run it up using `dotnet run`, and right-click to select `send requests`:
+Add this:
 ```
 GET http://localhost:5135
 ```
 
-In  `games.http`, add `###` to add another endpoints.
+Then, `cd GameStore.Api` and run it up using `dotnet run`, and right-click a request URL in the `games.http` and select `send requests`.
+
+It will show response similar to Postman in a new window:
+```
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: application/json; charset=utf-8
+Date: Tue, 12 May 2026 05:24:55 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+[
+  {
+    "id": 1,
+    "name": "Street Fighter II",
+    "genre": "Fighting",
+    "price": 19.99,
+    "releaseDate": "1992-07-15"
+  },
+  {
+    "id": 2,
+    "name": "Final Fantasy XIV",
+    "genre": "Roleplaying",
+    "price": 59.99,
+    "releaseDate": "2010-09-30"
+  }
+]
+```
+
+In  `games.http`, add `###` to add another requests.
+
+And add payload like this:
+```
+###
+POST http://localhost:5135/games
+Content-Type: application/json
+
+{
+    "name": "Minecraft",
+    "genre": "Kids and Family",
+    "price": 19.99,
+    "releaseDate": "2011-11-18"
+}
+```
+
+Then, right click and `send request`.
+
+Now it should show:
+```
+HTTP/1.1 201 Created
+Connection: close
+Content-Type: application/json; charset=utf-8
+Date: Tue, 12 May 2026 05:25:57 GMT
+Server: Kestrel
+Location: http://localhost:5135/games/3
+Transfer-Encoding: chunked
+
+{
+  "id": 3,
+  "name": "Minecraft",
+  "genre": "Kids and Family",
+  "price": 19.99,
+  "releaseDate": "2011-11-18"
+}
+```
+
+## For the put endpoint
+
+I will need to consider concurrency issue if I jsut write this in the `Program.cs`:
+```
+// PUT /games
+app.MapPut("games/{id}", (int id, UpdateGameDto udpatedGame) =>
+{
+    var index = games.FindIndex(game => game.Id == id);
+
+    games[index] = new GameDto(
+        id,
+        udpatedGame.Name,
+        udpatedGame.Genre,
+        udpatedGame.Price,
+        udpatedGame.ReleaseDate
+    );
+
+    return Results.NoContent();
+});
+```
+
+It's a simple way to practice but not thread safe.
