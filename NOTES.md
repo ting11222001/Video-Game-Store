@@ -168,3 +168,10 @@ app.MapPut("games/{id}", (int id, UpdateGameDto udpatedGame) =>
 ```
 
 It's a simple way to practice but not thread safe.
+
+
+## Always consider the extra case
+
+Note that for the `GET {id}` and `PUT` methods, a lot of times it could encounter `cannot find a record with a specific ID` case.
+
+So add exceptions for that always.
