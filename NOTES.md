@@ -59,3 +59,25 @@ In `Program.cs`, put the red dot at this line, it should trigger the breakpoint:
 ```
 app.MapGet("/", () => "Hello World!");
 ```
+
+## APIs
+
+Games REST API
+```
+GET /games
+GET /games/1
+POST /games
+PUT /games/1
+DELETE /games/1
+```
+
+Use `REST Client` extension.
+
+Created `games.http` in `GameStore.Api` folder.
+
+Add this, `cd GameStore.Api` and run it up using `dotnet run`, and right-click to select `send requests`:
+```
+GET http://localhost:5135
+```
+
+In  `games.http`, add `###` to add another endpoints.
