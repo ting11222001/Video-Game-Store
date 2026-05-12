@@ -175,3 +175,31 @@ It's a simple way to practice but not thread safe.
 Note that for the `GET {id}` and `PUT` methods, a lot of times it could encounter `cannot find a record with a specific ID` case.
 
 So add exceptions for that always.
+
+## `this WebApplication app` - the extension method
+
+In C#, an extension method lets you add a new method to an existing type without changing that type's source code.
+You do this by:
+
+1. Writing a static method in a static class
+2. Making the first parameter use the this keyword
+
+So this line:
+```
+public static WebApplication MapGamesEndpoints(this WebApplication app)
+```
+means: "add a method called MapGamesEndpoints to the WebApplication type."
+
+After that, any WebApplication object can call it like a normal method:
+```
+app.MapGamesEndpoints(); // looks like it belongs to app, but it's defined in your class
+```
+
+### Why WebApplication specifically
+
+WebApplication is the object that ASP.NET gives you when you call `builder.Build()`. It is the core of your web app. It knows how to register routes, run middleware, and start the server.
+
+Your extension method receives app, registers all your game routes on it, then returns it. That is all it does.
+
+### Why use this pattern
+It keeps Program.cs clean. Instead of defining 5 endpoints inline there, you move them to a dedicated class and call one line. As your app grows, you can add more endpoint classes (`OrdersEndpoints`, `UsersEndpoints`) and each gets its own file.
