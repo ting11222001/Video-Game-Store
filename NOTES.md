@@ -203,3 +203,29 @@ Your extension method receives app, registers all your game routes on it, then r
 
 ### Why use this pattern
 It keeps Program.cs clean. Instead of defining 5 endpoints inline there, you move them to a dedicated class and call one line. As your app grows, you can add more endpoint classes (`OrdersEndpoints`, `UsersEndpoints`) and each gets its own file.
+
+## The benefit of using `RouteGroupBuilder` instead of `WebApplication` in the GamesEndpoints
+
+Before, every route had to repeat it:
+```
+app.MapGet("games", ...);
+app.MapGet("games/{id}", ...);
+app.MapPost("games", ...);
+```
+
+With `MapGroup("games")`, you set the prefix once, and all routes under that group inherit it:
+```
+var group = app.MapGroup("games");
+group.MapGet("/", ...);      // becomes GET /games
+group.MapGet("/{id}", ...);  // becomes GET /games/{id}
+```
+
+### Other benefits of grouping
+You can apply middleware, auth, or rate limiting to all routes in the group in one place, instead of adding it to each route individually. For example:
+```
+var group = app.MapGroup("games").RequireAuthorization();
+```
+That applies auth to every route in the group automatically.
+
+### Why RouteGroupBuilder as the return type
+The method now returns the group object instead of `app`. This still allows chaining, and the caller can add more config to the group if needed.
