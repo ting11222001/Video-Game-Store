@@ -169,6 +169,9 @@ app.MapPut("games/{id}", (int id, UpdateGameDto udpatedGame) =>
 
 It's a simple way to practice but not thread safe.
 
+### What is DTO
+
+DTO is like a contract between the API and the client. It defines the fields of the data passing in between them.
 
 ## Always consider the extra case
 
@@ -389,3 +392,152 @@ Less boilerplate. No need to manually map database rows to objects. EF Core does
 
 Database portability. You can switch between SQL Server, PostgreSQL, SQLite, etc. with minimal code changes.
 ```
+
+### Create data models
+
+Data models are not the same as DTOs.
+
+DTOs are rarely changed once defined.
+
+`Entities` are going to my data models.
+
+Entity is the data model that maps directly to a database table. It represents the structure of your stored data.
+
+DTO (Data Transfer Object) is a simple object used to carry data between layers or over the network. It has no database mapping.
+
+Why have both?
+
+Your database table and your API response are rarely the same shape. Using entities directly causes problems:
+- You might expose sensitive fields (like PasswordHash)
+- You might send too much data (unused fields waste bandwidth)
+- You couple your API contract to your database schema, so a DB change breaks your API
+
+DTOs let you control exactly what goes in and out.
+
+#### Use `prop` shortcut to create the properties in an Entity
+
+Type `prop` in the `Genre` class, and it will generate:
+```
+public int MyProperty { get; set; }
+```
+
+### Add the datbase engine for this project
+
+Search this `NuGet` package called `Microsoft.EntityFrameworkCore.Sqlite`:
+https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.Sqlite/11.0.0-preview.3.26207.106#readme-body-tab
+
+
+Copy:
+```
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 8.*
+```
+
+If installed correctly, this will show in `GameStore.Api.csproj`:
+```
+<ItemGroup>
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.*" />
+</ItemGroup>
+```
+
+### Create a DbContext
+
+DbContext is an object that represents a session with the datbase and can be used to query and save instances of your entities.
+
+Think of DbContext like a shopping cart at a supermarket.
+
+You pick up items (read from the database), put things in the cart (add new records), remove items, or change what's in the cart (update records). When you're done, you go to the checkout (call SaveChanges()), and only then do the real changes happen in the database.
+
+```
+// Create a session with the database
+using var context = new AppDbContext();
+
+// Query: get all users
+var users = context.Users.ToList();
+
+// Add: put a new user in the "cart"
+context.Users.Add(new User { Name = "Alice" });
+
+// Checkout: save changes to the database
+context.SaveChanges();
+```
+
+DbContext manages all of that for you. You don't write raw SQL. You work with C# objects, and it translates that into SQL behind the scenes.
+
+`Repository Pattern` is about hiding database code behind a simple interface.
+
+Instead of writing `context.Users.Where(...).ToList()` everywhere in your app, you put that code in one place called a "repository". The rest of your app just calls `userRepository.GetAll()` and does not care how it works.
+
+Unit of Work Pattern is about grouping multiple changes into one save operation.
+
+DbContext behaves like both patterns out of the box.
+
+It is a Unit of Work because it collects all your changes and only writes to the database when you call SaveChanges().
+
+It is also a Repository because context.Users, context.Orders, etc. each act like a repository for that table.
+
+#### What the options do
+
+`DbContextOptions<GameStoreContext>` is a configuration object. It holds settings like:
+
+Which database to connect to (e.g. SQL Server, SQLite)
+The connection string
+Any EF Core behaviours you want to turn on/off
+
+#### Why pass it in
+
+`DbContext` (the EF Core base class) needs those settings to work. It does not know which database to use unless you tell it.
+
+By accepting `options` in your constructor and passing it up to `: DbContext(options)`, you are letting the caller decide the configuration. This is called dependency injection.
+
+The "caller" is usually your `Program.cs`, where you write something like:
+```
+builder.Services.AddDbContext<GameStoreContext>(options =>
+    options.UseSqlite("Data Source=GameStore.db"));
+```
+ASP.NET Core then builds the options object and passes it to GameStoreContext for you automatically.
+
+#### Why the constructor looks like that
+`DbContext` has a constructor that accepts `DbContextOptions`. Your class must pass the options up to it using `: DbContext(options)`. If you skip this, EF Core has no configuration and will throw an error.
+
+### OOP concepts involved in `GameStoreContext.cs`
+
+For this line particularly, `public class GameStoreContext(DbContextOptions<GameStoreContext> options) : DbContext(options)`.
+
+Inheritance: GameStoreContext extends DbContext. It gets all of DbContext's database abilities for free.
+
+Constructor: the part in (...) after the class name. It runs when the object is first created. Here it receives the options.
+
+Base constructor call: `: DbContext(options)` means "when creating this object, also run the parent class constructor with these options." The parent needs the options to set itself up, so you must pass them up.
+
+Dependency Injection: instead of `GameStoreContext` creating its own configuration, it receives it from outside. This makes it easier to test and change later. For example, you can pass a real database in production and an in-memory database in tests.
+
+#### `public DbSet<Game> Games => Set<Game>();` in GameStoreContext
+
+This line creates a property called `Games` that returns the `Games` table from the database.
+
+The `=>` means it runs `Set<Game>()` every time you access Games.
+
+Example:
+```
+// Get all games
+var games = await context.Games.ToListAsync();
+
+// Find one game
+var game = await context.Games.FindAsync(1);
+
+// Add a game
+context.Games.Add(new Game { Name = "Halo" });
+await context.SaveChangesAsync();
+```
+
+When you write `context.Games`, it calls `Set<Game>()` behind the scenes, which returns the EF Core object that talks to the `Games` table in your database.
+
+`DbSet<Game>` is the EF Core object that maps to the `Games` table, and `Game` is the C# class that maps to a single row in that table.
+
+`Set<T>()` is a method from DbContext that returns the `DbSet<T>` for that entity type.
+
+Using it here instead of just writing ` get; set; }` has two benefits:
+
+Null safety: `Set<T>()` always returns a non-null `DbSet<T>`, so the `=>` expression avoids the compiler warning you'd get with an auto-property that isn't initialized.
+
+Consistency: it matches how EF Core resolves the set internally anyway, so there's no extra overhead.
