@@ -719,6 +719,46 @@ app.MigrateDb() is called → needs a GameStoreContext
   → scope is disposed, GameStoreContext is cleaned up
 ```
 
+#### Extension methods - `public static void MigrateDb(this WebApplication app)`
+
+Writing like this i.e. adding `this` in the parameter is what makes it an extension method:
+```
+public static class DataExtensions
+{
+  public static void MigrateDb(this WebApplication app)
+  {
+      ... 
+  }
+}
+```
+
+Allows me to use the dot-call shortcut in `Program.cs`:
+```
+app.MigrateDb();
+```
+
+Extension methods must live in a `static` class and must themselves be `static.` This is a C# rule. The reason is that extension methods are just regular `static` methods underneath, compiled as `DataExtensions.MigrateDb(app)`. The dot-call syntax is just sugar the compiler provides. Static methods belong to the class itself, not to any instance, which makes them safe to call from anywhere without creating a `DataExtensions` object.
+
+So at compile time, `app.MigrateDb()` becomes `DataExtensions.MigrateDb(app)`.
+
+If I remove `this`, and it becomes a plain static helper method:
+```
+public static class DataExtensions
+{
+  public static void MigrateDb(WebApplication app)
+  {
+    ...
+  }
+}
+```
+
+Then, I will have to call `MigrateDb()` as:
+```
+DataExtensions.MigrateDb(app);
+```
+
+The `this WebApplication app` is saying: "attach this method to `WebApplication`, so any `WebApplication` instance can call it like `app.MigrateDb()`."
+
 ### Once added DataExtensions for automatically running migration to the database when app is up
 
 In `GameStore.Api`, run:
