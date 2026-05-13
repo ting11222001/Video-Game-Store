@@ -564,3 +564,25 @@ public MyService(IConfiguration config)
 ASP.NET Core automatically loaded that value from whichever source provided it, appsettings.json, user secrets, or environment variables.
 
 user secrets is the recommended place for connection strings that contain passwords, because appsettings.json might get committed to source control.
+
+Look at `ConnectionStrings` in `appsettings.json`:
+```
+"ConnectionStrings": {
+  "GameStore": "Data Source=GameStore.db"
+}
+```
+
+Then, in `Program.cs`, use this instead to read from `appsettings.json`:
+```
+var connString = builder.Configuration.GetConnectionString("GameStore");
+```
+
+Add a breakpoint at the next line:
+```
+builder.Services.AddSqlite<GameStoreContext>(connString);
+```
+
+Hit `F5` to run debug mode. By now, the debug variables should show the `connString` has read int the defined value:
+```
+connString [string] = Data Source=GameStore.db
+```
