@@ -586,3 +586,82 @@ Hit `F5` to run debug mode. By now, the debug variables should show the `connStr
 ```
 connString [string] = Data Source=GameStore.db
 ```
+
+### Setup database migrations
+
+Go to `NuGet` and find a package called `dotnet-ef`.
+
+Copy:
+```
+dotnet tool install --global dotnet-ef --version 8.0.26
+```
+
+Run it in `GameStore.Api`.
+
+Also install `Microsoft.EntityFrameworkCore.Design`.
+- This is to generate entity framework migrations later.
+
+Copy:
+```
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 8.0.26
+```
+
+Also, run it in `GameStore.Api`.
+
+So:
+- `dotnet-ef` is the CLI tool. It gives you commands like `dotnet ef migrations add` and `dotnet ef database update`. 
+- `Microsoft.EntityFrameworkCore.Design` is a `NuGet` package. The CLI tool calls into it at build time to generate migration files. Without it, `dotnet ef` cannot do anything useful in your project.
+
+Run both to check if installed correctly:
+```
+dotnet ef --version
+dotnet ef migrations list
+```
+
+Inside `GameStore.Api`, run:
+```
+dotnet ef migrations add InitialCreate --output-dir Data\Migrations
+```
+
+### Inside the migration file
+
+The `Up` method runs when you apply the migration. It builds the database structure.
+
+#### Step 1: Create `Genres` table
+
+Creates a simple table with two columns. `Id` is the primary key, and SQLite will auto-increment it.
+
+#### Step 2: Create `Games` table
+
+Creates the `Games` table, then adds two constraints:
+
+**Primary key**: same as Genres, `Id` is the primary key.
+
+**Foreign key**: this is the relationship part:
+- `GenreId` in `Games` must match an existing `Id` in `Genres`
+- `onDelete: Cascade` means if you delete a Genre, all Games with that `GenreId` are also deleted automatically
+- The name `FK_Games_Genres_GenreId` is just a label, following EF Core's naming convention
+
+#### Step 3: Create an index on `GenreId`
+
+An index is a lookup structure the database builds to make queries faster. Without it, a query like "find all games with `GenreId = 3`" would scan every row. With the index, the database jumps straight to the matching rows.
+
+EF Core adds this index automatically whenever it sees a foreign key, because you will almost always query or join on that column.
+
+The name `IX_Games_GenreId` follows the convention: `IX_<table>_<column>`.
+
+Then, run:
+```
+dotnet ef database update
+```
+
+### About SQLite database in this project
+
+The `GameStore.db` file on disk is proof that EF Core is using SQLite in file-based mode. The migration wrote the schema to that file, and your app reads/writes from it.
+
+You can confirm this by looking at your connection string in `appsettings.json`. It will look something like:
+```
+"ConnectionStrings": {
+  "DefaultConnection": "Data Source=GameStore.db"
+}
+```
