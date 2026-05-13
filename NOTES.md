@@ -665,3 +665,63 @@ You can confirm this by looking at your connection string in `appsettings.json`.
   "DefaultConnection": "Data Source=GameStore.db"
 }
 ```
+
+### Add migration automated setup
+
+So that the migration starts as soon as the app is up.
+
+Created `DataExtensions` and there is this:
+```
+public static void MigrateDb(this WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<GameStoreContext>();
+    dbContext.Database.Migrate();
+}
+```
+
+#### The concept: Dependency Injection (DI) Container
+
+When you write `builder.Services.AddSqlite<GameStoreContext>(connString)`, you are registering `GameStoreContext` into a container. Think of it as a registry, where you say "if anyone needs a `GameStoreContext`, here is how to build one."
+
+Later, when you need a `GameStoreContext`, you ask the container to give you one instead of using `new GameStoreContext()` yourself.
+
+#### The concept: Scopes
+
+Some services are designed to live for a short time, like one web request. `GameStoreContext` is one of these. The container will refuse to give you one unless you are inside a "scope", which is just a controlled lifetime boundary.
+
+During a normal web request, a scope is created and destroyed automatically. But `MigrateDb` runs at startup, outside any request. So you must create a scope manually.
+
+#### Line 1
+
+```csharp
+using var scope = app.Services.CreateScope();
+```
+
+This manually creates that short-lived boundary. The `using` keyword means the scope is automatically cleaned up when the method finishes.
+
+#### Line 2
+
+```csharp
+var dbContext = scope.ServiceProvider.GetRequiredService<GameStoreContext>();
+```
+
+This asks the container inside that scope to give you a `GameStoreContext`. It will throw an exception if one cannot be provided, which is a safe default.
+
+#### The full picture in your code
+
+```
+Program.cs registers GameStoreContext → container knows how to build it
+app.MigrateDb() is called → needs a GameStoreContext
+  → creates a scope manually (because we're outside a request)
+  → asks the container for a GameStoreContext
+  → runs the migration
+  → scope is disposed, GameStoreContext is cleaned up
+```
+
+### Once added DataExtensions for automatically running migration to the database when app is up
+
+In `GameStore.Api`, run:
+```
+dotnet run
+```
