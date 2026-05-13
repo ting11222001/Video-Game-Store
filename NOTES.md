@@ -813,6 +813,88 @@ Dependency injection is how EF Core gets configured in ASP.NET. The line `builde
 
 E.g. under the hood for `builder.Services.AddSqlite<GameStoreContext>(connString);` in `Program.cs`, it's using `AddScoped` concept which means each request to the API is using the same context registered in the Service Container.
 
+#### What is a Dependency?
+
+Dependency Injection (DI) means the dependency is passed into the class from the outside, instead of the class creating it itself. A **Service Container** (the `IServiceProvider`) manages this. You register your dependencies into the container, and it resolves, constructs, and injects them automatically when needed.
+
+**Example (tightly coupled):**
+
+At first we could:
+```csharp
+public MyService()
+{
+    var logger = new MyLogger();
+    logger.LogThis("I'm Ready!");
+}
+```
+
+But what if today `MyLogger` needs to pass `MyFileWritter` in, then we need to modify `MyService` accordingly:
+```csharp
+public MyService()
+{
+    var writter = new MyFileWritter("output.log");
+    var logger = new MyLogger(writter);
+    logger.LogThis("I'm Ready!");
+}
+```
+
+which is messy.
+
+**Problems with this approach:**
+
+- `MyService` is tightly coupled to `MyLogger`. Any changes to `MyLogger` require changes to `MyService`.
+- `MyService` needs to know how to construct and configure the `MyLogger` dependency.
+- It is hard to test `MyService` since the `MyLogger` dependency cannot be mocked or stubbed.
+
+Better to register `MyLogger` to a Service Container i.e. `IServiceProvier`, so that this Service Container can help resolve, construct and inject dependencies (e.g. `MyLogger`) into `MyService`.
+
+So in DI we can do:
+```csharp
+public MyService(MyLogger logger)
+{
+    logger.LogThis("I'm Ready!");
+}
+```
+
+#### Dependency Inversion Principle
+
+> "Code should depend on abstractions, not on concrete implementations."
+
+Instead of depending on `MyLogger` directly, `MyService` depends on an interface called `ILogger`. `MyLogger`, `CloudLogger`, `ConsoleLogger`, and `DBLogger` all implement `ILogger`.
+
+MyService  -->  ILogger  <--  MyLogger, CloudLogger, etc.
+
+**Benefits:**
+
+- The logger dependency can be swapped for a different implementation without modifying `MyService`.
+- It is easier to test `MyService` since the logger dependency can be mocked or stubbed.
+- Code is cleaner, easier to modify, and easier to reuse.
+
+```csharp
+public MyService(ILogger logger)
+{
+    logger.LogThis("I'm Ready!");
+}
+```
+
+#### Service Lifetimes
+
+Service lifetime controls how long a dependency object lives and how many times it gets created.
+
+| Lifetime | How many instances | When to use |
+|---|---|---|
+| `Transient` | a new object is created every time it is requested | Stateless, lightweight services |
+| `Scoped` | one object is created per request (e.g. one HTTP request). All code in the same request shares the same instance. | Services that hold per-request state (e.g. DB context) |
+| `Singleton` | one object is created for the whole app lifetime. Every request shares the same instance. | Shared, thread-safe services (e.g. cache, config) |
+
+How to register in `Program.cs`:
+
+```csharp
+services.AddTransient();
+services.AddScoped();
+services.AddSingleton();
+```
+
 ## Change the logging information
 
 I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:

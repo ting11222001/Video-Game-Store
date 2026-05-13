@@ -8,7 +8,7 @@ POST http://localhost:5135/games
 Content-Type: application/json
 
 {
-    "name": "Rainbow Six: Siege",
+    "name": "Apples to Apples",
     "genreId": 2,
     "price": 19.99,
     "releaseDate": "2011-11-18"
