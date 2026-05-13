@@ -728,6 +728,45 @@ dotnet run
 
 Note that when using SQLite, it's easy to just delete the database i.e. right-click on `GameStore.db` in the EXPLORER, and run `dotnet run` to generate the database again.
 
+### How to seed the data
+
+I can do it in the `GameStoreContext.cs`.
+
+As soon as the migration started, I can start seeding the database.
+
+Add these in `GameStoreContext.cs`:
+```
+// Seeding initial data for Genres 
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Genre>().HasData(
+        new Genre { Id = 1, Name = "Fighting" },
+        new Genre { Id = 2, Name = "Roleplaying" },
+        new Genre { Id = 3, Name = "Sports" },
+        new Genre { Id = 4, Name = "Racing" },
+        new Genre { Id = 5, Name = "Kids and Family" }
+    );
+}
+```
+
+Then, run this again to let database be updated:
+```
+dotnet ef migrations add SeedGenres --output-dir Data\Migrations
+```
+
+The new migration file will now be in `Data\Migrations`.
+
+Then, run `dotnet run`.
+
+This will show that the migration is applied:
+```
+Building...
+info: Microsoft.EntityFrameworkCore.Migrations[20402]
+      Applying migration '20260513054400_SeedGenres'.
+```
+
+And in `GameStore.db` there should be the seeded data present in the `Genres` table too.
+
 ## Change the logging information
 
 I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:
