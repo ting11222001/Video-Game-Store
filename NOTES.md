@@ -725,3 +725,12 @@ In `GameStore.Api`, run:
 ```
 dotnet run
 ```
+
+Note that when using SQLite, it's easy to just delete the database i.e. right-click on `GameStore.db` in the EXPLORER, and run `dotnet run` to generate the database again.
+
+## Change the logging information
+
+I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:
+```
+"Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+```
