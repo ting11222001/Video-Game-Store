@@ -541,3 +541,26 @@ Using it here instead of just writing ` get; set; }` has two benefits:
 Null safety: `Set<T>()` always returns a non-null `DbSet<T>`, so the `=>` expression avoids the compiler warning you'd get with an auto-property that isn't initialized.
 
 Consistency: it matches how EF Core resolves the set internally anyway, so there's no extra overhead.
+
+### Configuration System
+
+Connection string is used to connect the REST API with the Database.
+
+It's not ideal to hard code the connection string in the code.
+
+Better to put it in `appsettings.json`.
+
+`IConfiguration` is the central object that ASP.NET Core builds at startup. It reads from all those sources (appsettings.json, environment variables, user secrets, etc.) and merges them together.
+
+So in your code, you just inject `IConfiguration` and read from it. You don't call the sources directly.
+
+```
+// You inject IConfiguration
+public MyService(IConfiguration config)
+{
+    var connStr = config.GetConnectionString("GameStore");
+}
+```
+ASP.NET Core automatically loaded that value from whichever source provided it, appsettings.json, user secrets, or environment variables.
+
+user secrets is the recommended place for connection strings that contain passwords, because appsettings.json might get committed to source control.
