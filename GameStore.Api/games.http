@@ -8,9 +8,9 @@ POST http://localhost:5135/games
 Content-Type: application/json
 
 {
-    "name": "Minecraft",
-    "genre": "Kids and Family",
-    "price": 119.99,
+    "name": "Rainbow Six: Siege",
+    "genreId": 2,
+    "price": 19.99,
     "releaseDate": "2011-11-18"
 }
 
@@ -21,7 +21,7 @@ Content-Type: application/json
 {
     "name": "Street Fighter II Turbo",
     "genre": "Fighting",
-    "price": 119.99,
+    "price": 10.99,
     "releaseDate": "1992-07-15"
 }
 

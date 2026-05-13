@@ -807,6 +807,12 @@ info: Microsoft.EntityFrameworkCore.Migrations[20402]
 
 And in `GameStore.db` there should be the seeded data present in the `Genres` table too.
 
+### Dependency Injection
+
+Dependency injection is how EF Core gets configured in ASP.NET. The line `builder.Services.AddSqlite<GameStoreContext>(connString)` is the bridge between DI and EF Core. 
+
+E.g. under the hood for `builder.Services.AddSqlite<GameStoreContext>(connString);` in `Program.cs`, it's using `AddScoped` concept which means each request to the API is using the same context registered in the Service Container.
+
 ## Change the logging information
 
 I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:
