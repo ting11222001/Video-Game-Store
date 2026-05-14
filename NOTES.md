@@ -1003,6 +1003,20 @@ app.MapGamesEndpoints(); // looks like it belongs to app, but it's defined elsew
 
 Yes, all three patterns are common in .NET minimal API tutorials.
 
+### LINQ vs EF Core specific methods in `GamesEndpoints`
+
+LINQ is the parts that use `.Where()`, `Select()`, `.Include()` and lambda expressions like `game => game.Id == id`. These are LINQ extension methods on `IQueryable`.
+
+Not LINQ are the EF Core-specific methods: `.Find()`, `.Add()`, `.SaveChanges()`, `.Entry()`, `.ExecuteDelete()`, `.AsNoTracking()`. These belong to EF Core's API, not LINQ itself.
+
+In practice, EF Core uses LINQ to build queries, then translates them to SQL. So they work together, but they are not the same thing.
+
+## Add asynchronous model
+
+Whenever the program should go out of the current process to, say, interact with the database. Add this.
+
+Added to the `GamesEndpoints` and Migration logic in `DataExtensions`.
+
 ## Change the logging information
 
 I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:
