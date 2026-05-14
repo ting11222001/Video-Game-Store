@@ -895,6 +895,114 @@ services.AddScoped();
 services.AddSingleton();
 ```
 
+### The flow in `GamesEndpoints`
+
+Client sends DTO → map to Entity → save to DB → map back to DTO → return to Client
+
+#### How GamesEndpoints.cs evolved
+
+1. baseline, plain lists in memory
+
+The data lives in a static List<GameDto> inside the class itself. No database. All endpoints read and write directly to that list.
+
+```csharp
+private static readonly List<GameDto> games = [...];
+```
+
+The return type is WebApplication. Routes are mapped directly on app.
+
+2. route grouping + validation
+Two things changed:
+The return type became `RouteGroupBuilder`, and routes moved to a `group` variable.
+```csharp
+var group = app.MapGroup("games"); // before: app.MapGet("games", ...)
+```
+
+This is cleaner because you define the prefix `"games"` once, not on every route.
+
+Also `.WithParameterValidation()` was added to the group. This makes the framework automatically reject bad inputs (like a missing required field) before your code runs.
+
+Data is still the in-memory list.
+
+3. first touch of the database (POST only)
+The GET, PUT, DELETE still use the in-memory list. But POST now takes a GameStoreContext (Entity Framework DbContext) as a parameter.
+```csharp
+group.MapPost("/", (CreateGameDto newGame, GameStoreContext dbContext) =>
+```
+
+ASP.NET automatically injects `dbContext` because it is registered in the DI container. You do not create it yourself.
+Inside POST, the code manually builds a `Game` entity from the DTO:
+```csharp
+Game game = new()
+{
+    Name = newGame.Name,
+    GenreId = newGame.GenreId,
+    ...
+};
+```
+This is the DTO-to-Entity mapping done by hand, inline.
+
+4. mapping moved to extension methods
+The manual mapping code is replaced with cleaner calls like:
+```csharp
+Game game = newGame.ToEntity();
+game.ToDto();
+```
+These `ToEntity()` and `ToDto()` methods are defined elsewhere as extension methods. This is the mapping concept. It moves the conversion logic out of the endpoint, so the endpoint only handles HTTP concerns.
+POST now fully uses the database. GET, PUT, DELETE still use the in-memory list (inconsistent, mid-refactor state).
+
+
+5. full database, mapping everywhere
+The in-memory list is gone. All endpoints use dbContext.
+```csharp
+group.MapGet("/", (GameStoreContext dbContext) =>
+    dbContext.Games
+        .Include(game => game.Genre)
+        .Select(game => game.ToGameSummaryDto())
+        .AsNoTracking()
+);
+```
+New things here:
+
+- `.Include(game => game.Genre)` loads the related Genre from a separate table (this is called eager loading).
+- `.AsNoTracking()` tells EF not to watch this data for changes, which is faster for read-only queries.
+- `ToGameSummaryDto()` and `ToGameDetailsDto()` are the mapping methods from step 4, now used everywhere.
+
+#### In the process of the tutorial, he started from just updating the in-memory `games` list and then refactor to update into the database using `dbContext`
+
+For example, he started with `POST` just adding to the in-memory list:
+```csharp
+// POST just adds to the list in RAM
+games.Add(game);
+```
+
+Nothing touches a database. If you restart the app, all added games are gone. The games list resets to just Street Fighter II and Final Fantasy XIV.
+
+Then, the turning point for `POST`:
+```csharp
+group.MapPost("/", (CreateGameDto newGame, GameStoreContext dbContext) =>
+{
+    Game game = new() { Name = newGame.Name, ... };
+    dbContext.Games.Add(game);  // tells EF to track this new game
+    dbContext.SaveChanges();    // THIS is what actually writes to the database
+    ...
+});
+```
+
+`dbContext.Games.Add(game)` alone does nothing to the database. It just marks the object as "pending insert". `SaveChanges()` is the line that sends the SQL `INSERT` to the database.
+
+#### Why static?
+The class is static because it only contains helper methods. It holds no instance data. You never do new GamesEndpoints(). Static classes enforce that, and it is common for endpoint/extension method files in .NET minimal APIs.
+
+The games list is static because it needs to survive across requests. If it were an instance field, it would be created fresh on each call and you would lose all your data. One static list = one shared list for the whole app lifetime.
+
+MapGamesEndpoints is static because extension methods in C# must be static. That is a language rule, not a design choice. It is what lets you call it like this:
+```csharp
+app.MapGamesEndpoints(); // looks like it belongs to app, but it's defined elsewhere
+```
+
+Yes, all three patterns are common in .NET minimal API tutorials.
+
 ## Change the logging information
 
 I can change what to log in the terminal by adding this to `appsettings.json` in the `"Logging"` block:

@@ -32,10 +32,12 @@ public static class GamesEndpoints
         // POST /games
         group.MapPost("/", (CreateGameDto newGame, GameStoreContext dbContext) =>
         {
+            // DTO → Entity
             Game game = newGame.ToEntity();
             dbContext.Games.Add(game);
             dbContext.SaveChanges();
 
+            // Entity → DTO (to send back)
             return Results.CreatedAtRoute(GetGameEndpointName, new { id = game.Id }, game.ToGameDetailsDto());
         });
 
